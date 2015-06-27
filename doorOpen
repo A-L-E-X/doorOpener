@@ -5,13 +5,13 @@
 DistanceGP2Y0A21YK Dist;
  
 
-const uint8_t TH = 25; // 25 cm
+const uint8_t TH = 35; // 25 cm range
 uint8_t THflag = 0;
 
 
 const uint8_t buzzPin = 7;
 
-uint16_t timeOut = 4000; // 4 sec
+uint16_t timeOut = 4000; // 4 sec timeout
 uint32_t lastTime = 0;
 
  
@@ -19,6 +19,7 @@ void setup()
 {
   Serial.begin(115200);
   Dist.begin(0);
+  pinMode(buzzPin, OUTPUT);
 }
  
 void loop()
@@ -36,6 +37,7 @@ void loop()
   }
   else THflag = 0;
   
+//  Serial.println(Dist.getDistanceRaw());
   delay(10);
 }
 
