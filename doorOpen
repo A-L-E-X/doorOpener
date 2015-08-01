@@ -1,5 +1,83 @@
 
 
+
+
+
+
+uint8_t openPin = 7;
+uint8_t ledPin = 13;
+
+typedef struct event
+{
+  uint16_t timeout = 0;
+  uint32_t lastTimeEvent = 0;
+  char lastDetected = 0;
+  uint16_t cnt = 0;
+};
+
+event readSensor;
+
+typedef struct filter
+{
+  float alpha = 0.5;
+  uint16_t prevOutVal = 0;
+};
+
+filter HPF;
+
+void setup()
+{
+  pinMode(openPin, OUTPUT);
+  digitalWrite(openPin, LOW);
+
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+  
+  Serial.begin(115200);
+  
+  readSensor.timeout = 50;
+  readSensor.lastTimeEvent = millis();
+  
+  HPF.alpha = 0.38;
+}
+
+void loop()
+{
+  if (Serial.available())
+    if (Serial.read() == '1') openDoor();
+  
+  
+  if (millis() - readSensor.lastTimeEvent > readSensor.timeout)
+  {
+    uint16_t val = (analogRead(0)>>1) + 300;
+    if (val < HPF.prevOutVal) val = HPF.prevOutVal;
+    HPF.prevOutVal = (uint16_t) ( (1 - HPF.alpha) * (val - HPF.prevOutVal));
+    Serial.println(HPF.prevOutVal);
+    readSensor.lastTimeEvent = millis();
+  }
+}
+
+void openDoor()
+{
+  digitalWrite(openPin, HIGH);
+  digitalWrite(ledPin, HIGH);
+  delay(50);
+  digitalWrite(openPin, LOW);
+  digitalWrite(ledPin, LOW);
+}
+
+
+
+
+
+
+
+
+
+
+
+/*
+
 #include <DistanceGP2Y0A21YK.h>
  
 DistanceGP2Y0A21YK Dist;
@@ -41,12 +119,11 @@ void loop()
   delay(10);
 }
 
-
-
-
 void beep()
 {
   digitalWrite(buzzPin, HIGH);
   delay(50);
   digitalWrite(buzzPin, LOW);
 }
+
+*/
