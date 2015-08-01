@@ -1,8 +1,15 @@
 
 
+/*
+
+If alpha = 0.5, then the RC time constant equals to the sampling period. If alpha << 0.5, then RC is significantly smaller than the sampling interval and RC approx= alpha * T_sampl
 
 
+*/
 
+//#include <DistanceGP2Y0A21YK.h>
+ 
+//DistanceGP2Y0A21YK Dist;
 
 uint8_t openPin = 7;
 uint8_t ledPin = 13;
@@ -15,15 +22,18 @@ typedef struct event
   uint16_t cnt = 0;
 };
 
-event readSensor;
+event readSensor, activation;
 
 typedef struct filter
 {
   float alpha = 0.5;
   uint16_t prevOutVal = 0;
+  uint16_t prevInVal = 0;
 };
 
 filter HPF;
+
+uint8_t TH = 5;
 
 void setup()
 {
@@ -34,11 +44,15 @@ void setup()
   digitalWrite(ledPin, LOW);
   
   Serial.begin(115200);
+//  Dist.begin(0);
   
-  readSensor.timeout = 50;
+  readSensor.timeout = 10;
   readSensor.lastTimeEvent = millis();
   
-  HPF.alpha = 0.38;
+  activation.lastTimeEvent = millis();
+  activation.timeout = 3000;
+  
+  HPF.alpha = 0.95;//0.38;
 }
 
 void loop()
@@ -49,11 +63,26 @@ void loop()
   
   if (millis() - readSensor.lastTimeEvent > readSensor.timeout)
   {
-    uint16_t val = (analogRead(0)>>1) + 300;
-    if (val < HPF.prevOutVal) val = HPF.prevOutVal;
-    HPF.prevOutVal = (uint16_t) ( (1 - HPF.alpha) * (val - HPF.prevOutVal));
+    uint16_t val = (analogRead(0)<<2);
+    
+    // DC offset removal: Y_i = 0.996 * (Y_i + X_i - X_i-1)
+    if (val < HPF.prevInVal) HPF.prevInVal = val;
+    uint32_t tmpVal = HPF.prevOutVal + val - HPF.prevInVal;
+    HPF.prevOutVal = ( (tmpVal<<8) -(tmpVal<<7) )>>8; // integer implementation of float coefficient
+    HPF.prevInVal = val; // record the new input value
+    
+//    printAsteriscs(HPF.prevOutVal);
     Serial.println(HPF.prevOutVal);
+    Serial.print("       ");  Serial.println(val);
+       
     readSensor.lastTimeEvent = millis();
+    
+    if (HPF.prevOutVal > TH &&  millis() - activation.lastTimeEvent > activation.timeout)
+    {
+//      openDoor();
+      activation.lastTimeEvent = millis();
+    }
+    
   }
 }
 
@@ -69,7 +98,19 @@ void openDoor()
 
 
 
-
+void printAsteriscs(uint16_t val)
+{
+  uint16_t maxVal = 1023;
+  uint8_t numOfdots = 1;
+//  val = maxVal - val; // complementary value
+  while(val > 1)
+  {
+    val /= 1.4;
+    numOfdots++;
+  }
+  for(uint8_t i = 0; i < numOfdots; i++) Serial.print('*');
+  Serial.println();
+}
 
 
 
